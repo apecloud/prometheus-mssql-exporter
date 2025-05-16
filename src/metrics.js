@@ -388,6 +388,87 @@ FROM sys.dm_os_sys_memory`,
   },
 };
 
+const mssql_cache_hit_ratio = {
+  metrics: {
+    mssql_cache_hit_ratio: new client.Gauge({ 
+      name: "mssql_cache_hit_ratio", 
+      help: "Buffer cache hit ratio percentage" 
+    }),
+  },
+  query: `SELECT 
+    a.cntr_value AS hit_ratio,
+    b.cntr_value AS hit_ratio_base
+  FROM sys.dm_os_performance_counters a
+  JOIN sys.dm_os_performance_counters b 
+    ON a.object_name = b.object_name 
+  WHERE a.counter_name = 'Buffer cache hit ratio'
+    AND b.counter_name = 'Buffer cache hit ratio base'`,
+  collect: (rows, metrics) => {
+    const hit_ratio = rows[0][0].value;
+    const hit_ratio_base = rows[0][1].value;
+    const ratio = (hit_ratio / hit_ratio_base) * 100;
+    metricsLog("Fetched buffer cache hit ratio", ratio);
+    metrics.mssql_cache_hit_ratio.set(ratio);
+  },
+};
+
+const mssql_buffer_pool = {
+  metrics: {
+    mssql_buffer_pool_total_pages: new client.Gauge({ 
+      name: "mssql_buffer_pool_total_pages", 
+      help: "Total pages in buffer pool" 
+    }),
+    mssql_buffer_pool_database_pages: new client.Gauge({ 
+      name: "mssql_buffer_pool_database_pages", 
+      help: "Database pages in buffer pool" 
+    }),
+    mssql_buffer_pool_free_pages: new client.Gauge({ 
+      name: "mssql_buffer_pool_free_pages", 
+      help: "Free pages in buffer pool" 
+    }),
+    mssql_buffer_pool_reserved_pages: new client.Gauge({ 
+      name: "mssql_buffer_pool_reserved_pages", 
+      help: "Reserved pages in buffer pool" 
+    }),
+  },
+  query: `SELECT 
+    cntr_value 
+  FROM sys.dm_os_performance_counters
+  WHERE counter_name IN ('Total pages', 'Database pages', 'Free pages', 'Reserved pages')
+    AND object_name = 'SQLServer:Buffer Manager'`,
+  collect: (rows, metrics) => {
+    metrics.mssql_buffer_pool_total_pages.set(rows[0][0].value);
+    metrics.mssql_buffer_pool_database_pages.set(rows[1][0].value);
+    metrics.mssql_buffer_pool_free_pages.set(rows[2][0].value);
+    metrics.mssql_buffer_pool_reserved_pages.set(rows[3][0].value);
+    metricsLog(
+      "Fetched buffer pool stats",
+      "Total pages", rows[0][0].value,
+      "Database pages", rows[1][0].value,
+      "Free pages", rows[2][0].value,
+      "Reserved pages", rows[3][0].value
+    );
+  },
+};
+
+const mssql_full_scans = {
+  metrics: {
+    mssql_full_scans: new client.Gauge({ 
+      name: "mssql_full_scans", 
+      help: "Full table scans per second" 
+    }),
+  },
+  query: `SELECT cntr_value
+  FROM sys.dm_os_performance_counters
+  WHERE counter_name = 'Full Scans/sec'
+    AND object_name = 'SQLServer:Access Methods'`,
+  collect: (rows, metrics) => {
+    const scans = rows[0][0].value;
+    metricsLog("Fetched full scans per second", scans);
+    metrics.mssql_full_scans.set(scans);
+  },
+};
+
 const entries = {
   mssql_up,
   mssql_product_version,
@@ -406,6 +487,9 @@ const entries = {
   mssql_transactions,
   mssql_os_process_memory,
   mssql_os_sys_memory,
+  mssql_cache_hit_ratio,
+  mssql_buffer_pool,
+  mssql_full_scans
 };
 
 module.exports = {
