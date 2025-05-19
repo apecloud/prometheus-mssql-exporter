@@ -28,6 +28,17 @@ Prometheus exporter for Microsoft SQL Server (MSSQL). Exposes the following metr
 - mssql_available_physical_memory_kb Available physical memory in KB
 - mssql_total_page_file_kb Total page file in KB
 - mssql_available_page_file_kb Available page file in KB
+- mssql_buffer_cache_hit_ratio Buffer cache hit ratio percentage
+- mssql_full_scans Full table scans per second
+- mssql_plan_cache_hit_ratio Plan Cache hit ratio percentage
+- mssql_sql_compilations Number of SQL compilations per second
+- mssql_sql_recompilations Number of SQL recompilations per second  
+- mssql_forced_parameterizations Number of forced parameterizations per second
+- mssql_auto_param_attempts Number of auto-parameterization attempts per second
+- mssql_failed_auto_params Number of failed auto-parameterizations per second
+- mssql_safe_auto_params Number of safe auto-parameterizations per second
+- mssql_unsafe_auto_params Number of unsafe auto-parameterizations per second
+- mssql_ag_sync_lag_secs{database,replica,sync_state} Synchronization lag in seconds between primary and secondary replicas in Availability Group
 
 Please feel free to submit other interesting metrics to include.
 
