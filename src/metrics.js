@@ -388,10 +388,10 @@ FROM sys.dm_os_sys_memory`,
   },
 };
 
-const mssql_cache_hit_ratio = {
+const mssql_buffer_cache_hit_ratio = {
   metrics: {
     mssql_cache_hit_ratio: new client.Gauge({ 
-      name: "mssql_cache_hit_ratio", 
+      name: "mssql_buffer_cache_hit_ratio", 
       help: "Buffer cache hit ratio percentage" 
     }),
   },
@@ -409,45 +409,6 @@ const mssql_cache_hit_ratio = {
     const ratio = (hit_ratio / hit_ratio_base) * 100;
     metricsLog("Fetched buffer cache hit ratio", ratio);
     metrics.mssql_cache_hit_ratio.set(ratio);
-  },
-};
-
-const mssql_buffer_pool = {
-  metrics: {
-    mssql_buffer_pool_total_pages: new client.Gauge({ 
-      name: "mssql_buffer_pool_total_pages", 
-      help: "Total pages in buffer pool" 
-    }),
-    mssql_buffer_pool_database_pages: new client.Gauge({ 
-      name: "mssql_buffer_pool_database_pages", 
-      help: "Database pages in buffer pool" 
-    }),
-    mssql_buffer_pool_free_pages: new client.Gauge({ 
-      name: "mssql_buffer_pool_free_pages", 
-      help: "Free pages in buffer pool" 
-    }),
-    mssql_buffer_pool_reserved_pages: new client.Gauge({ 
-      name: "mssql_buffer_pool_reserved_pages", 
-      help: "Reserved pages in buffer pool" 
-    }),
-  },
-  query: `SELECT 
-    cntr_value 
-  FROM sys.dm_os_performance_counters
-  WHERE counter_name IN ('Total pages', 'Database pages', 'Free pages', 'Reserved pages')
-    AND object_name = 'SQLServer:Buffer Manager'`,
-  collect: (rows, metrics) => {
-    metrics.mssql_buffer_pool_total_pages.set(rows[0][0].value);
-    metrics.mssql_buffer_pool_database_pages.set(rows[1][0].value);
-    metrics.mssql_buffer_pool_free_pages.set(rows[2][0].value);
-    metrics.mssql_buffer_pool_reserved_pages.set(rows[3][0].value);
-    metricsLog(
-      "Fetched buffer pool stats",
-      "Total pages", rows[0][0].value,
-      "Database pages", rows[1][0].value,
-      "Free pages", rows[2][0].value,
-      "Reserved pages", rows[3][0].value
-    );
   },
 };
 
@@ -469,6 +430,125 @@ const mssql_full_scans = {
   },
 };
 
+const mssql_plan_cache_hit_ratio = {
+  metrics: {
+    mssql_plan_cache_hit_ratio: new client.Gauge({
+      name: "mssql_plan_cache_hit_ratio",
+      help: "Plan Cache hit ratio percentage",
+    }),
+  },
+  query: `SELECT 
+    a.cntr_value AS hit_ratio,
+    b.cntr_value AS hit_ratio_base
+  FROM sys.dm_os_performance_counters a
+  JOIN sys.dm_os_performance_counters b 
+    ON a.object_name = b.object_name
+    AND a.instance_name = b.instance_name
+  WHERE a.counter_name = 'Cache Hit Ratio'
+    AND b.counter_name = 'Cache Hit Ratio Base'
+    AND a.object_name = 'SQLServer:Plan Cache'
+    AND a.instance_name = '_Total'`,
+  collect: (rows, metrics) => {
+    const hit_ratio = rows[0][0].value;
+    const hit_ratio_base = rows[0][1].value;
+    const ratio = (hit_ratio / hit_ratio_base) * 100;
+    metricsLog("Fetched plan cache hit ratio", ratio);
+    metrics.mssql_plan_cache_hit_ratio.set(ratio);
+  },
+};
+
+const mssql_ag_sync_lag = {
+  metrics: {
+    mssql_ag_sync_lag_secs: new client.Gauge({
+      name: "mssql_ag_sync_lag_secs",
+      help: "Synchronization lag in seconds between primary and secondary replicas in Availability Group",
+      labelNames: ["database", "replica", "sync_state"]
+    }),
+  },
+  query: `SELECT 
+    db_name(database_id) as database_name,
+    replica_server_name,
+    synchronization_state_desc,
+    secondary_lag_seconds
+  FROM sys.dm_hadr_database_replica_states drs
+  JOIN sys.availability_replicas ar ON drs.replica_id = ar.replica_id
+  WHERE is_local = 0`,
+  collect: (rows, metrics) => {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const database = row[0].value;
+      const replica = row[1].value;
+      const sync_state = row[2].value;
+      const sync_lag = row[3].value;
+      metricsLog("Fetched AG sync lag for database", database, "replica", replica, "state", sync_state, "lag (sec)", sync_lag);
+      metrics.mssql_ag_sync_lag_secs.set({ database, replica, sync_state }, sync_lag);
+    }
+  },
+};
+
+const mssql_sql_compilations = {
+  metrics: {
+    mssql_sql_compilations: new client.Gauge({
+      name: "mssql_sql_compilations",
+      help: "Number of SQL compilations per second"
+    }),
+    mssql_sql_recompilations: new client.Gauge({
+      name: "mssql_sql_recompilations",
+      help: "Number of SQL recompilations per second"
+    }),
+    mssql_forced_parameterizations: new client.Gauge({
+      name: "mssql_forced_parameterizations",
+      help: "Number of forced parameterizations per second"
+    }),
+    mssql_auto_param_attempts: new client.Gauge({
+      name: "mssql_auto_param_attempts",
+      help: "Number of auto-parameterization attempts per second"
+    }),
+    mssql_failed_auto_params: new client.Gauge({
+      name: "mssql_failed_auto_params",
+      help: "Number of failed auto-parameterizations per second"
+    }),
+    mssql_safe_auto_params: new client.Gauge({
+      name: "mssql_safe_auto_params",
+      help: "Number of safe auto-parameterizations per second"
+    }),
+    mssql_unsafe_auto_params: new client.Gauge({
+      name: "mssql_unsafe_auto_params",
+      help: "Number of unsafe auto-parameterizations per second"
+    })
+  },
+  query: `SELECT
+    SUM(CASE WHEN counter_name = 'SQL Compilations/sec' THEN cntr_value ELSE 0 END) AS compilations,
+    SUM(CASE WHEN counter_name = 'SQL Re-Compilations/sec' THEN cntr_value ELSE 0 END) AS recompilations,
+    SUM(CASE WHEN counter_name = 'Forced Parameterizations/sec' THEN cntr_value ELSE 0 END) AS forced_params,
+    SUM(CASE WHEN counter_name = 'Auto-Param Attempts/sec' THEN cntr_value ELSE 0 END) AS auto_param_attempts,
+    SUM(CASE WHEN counter_name = 'Failed Auto-Params/sec' THEN cntr_value ELSE 0 END) AS failed_auto_params,
+    SUM(CASE WHEN counter_name = 'Safe Auto-Params/sec' THEN cntr_value ELSE 0 END) AS safe_auto_params,
+    SUM(CASE WHEN counter_name = 'Unsafe Auto-Params/sec' THEN cntr_value ELSE 0 END) AS unsafe_auto_params
+  FROM sys.dm_os_performance_counters
+  WHERE object_name = 'SQLServer:SQL Statistics'
+    AND counter_name IN (
+      'SQL Compilations/sec',
+      'SQL Re-Compilations/sec',
+      'Forced Parameterizations/sec',
+      'Auto-Param Attempts/sec',
+      'Failed Auto-Params/sec',
+      'Safe Auto-Params/sec',
+      'Unsafe Auto-Params/sec'
+    )`,
+  collect: (rows, metrics) => {
+    const row = rows[0];
+    metrics.mssql_sql_compilations.set(row[0].value);
+    metrics.mssql_sql_recompilations.set(row[1].value);
+    metrics.mssql_forced_parameterizations.set(row[2].value);
+    metrics.mssql_auto_param_attempts.set(row[3].value);
+    metrics.mssql_failed_auto_params.set(row[4].value);
+    metrics.mssql_safe_auto_params.set(row[5].value);
+    metrics.mssql_unsafe_auto_params.set(row[6].value);
+    metricsLog("Fetched SQL compilation metrics", row);
+  }
+};
+
 const entries = {
   mssql_up,
   mssql_product_version,
@@ -487,9 +567,11 @@ const entries = {
   mssql_transactions,
   mssql_os_process_memory,
   mssql_os_sys_memory,
-  mssql_cache_hit_ratio,
-  mssql_buffer_pool,
-  mssql_full_scans
+  mssql_buffer_cache_hit_ratio,
+  mssql_full_scans,
+  mssql_plan_cache_hit_ratio,
+  mssql_sql_compilations,
+  mssql_ag_sync_lag
 };
 
 module.exports = {
