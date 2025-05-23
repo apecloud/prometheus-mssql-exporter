@@ -12,9 +12,11 @@ const mssql_up = {
   },
   query: "SELECT 1",
   collect: (rows, metrics) => {
-    let mssql_up = rows[0][0].value;
-    metricsLog("Fetched status of instance", mssql_up);
-    metrics.mssql_up.set(mssql_up);
+    let mssql_up = Number(rows[0][0].value);
+    if (!isNaN(mssql_up)) {
+      metricsLog("Fetched status of instance", mssql_up);
+      metrics.mssql_up.set(mssql_up);
+    }
   },
 };
 
@@ -27,9 +29,11 @@ const mssql_product_version = {
 `,
   collect: (rows, metrics) => {
     let v = productVersionParse(rows[0][0].value);
-    const mssql_product_version = v.major + "." + v.minor;
-    metricsLog("Fetched version of instance", mssql_product_version);
-    metrics.mssql_product_version.set(mssql_product_version);
+    const versionNum = parseFloat(v.major + "." + v.minor);
+    if (!isNaN(versionNum)) {
+      metricsLog("Fetched version of instance", versionNum);
+      metrics.mssql_product_version.set(versionNum);
+    }
   },
 };
 
@@ -39,9 +43,11 @@ const mssql_instance_local_time = {
   },
   query: `SELECT DATEDIFF(second, '19700101', GETUTCDATE())`,
   collect: (rows, metrics) => {
-    const mssql_instance_local_time = rows[0][0].value;
-    metricsLog("Fetched current time", mssql_instance_local_time);
-    metrics.mssql_instance_local_time.set(mssql_instance_local_time);
+    const mssql_instance_local_time = Number(rows[0][0].value);
+    if (!isNaN(mssql_instance_local_time)) {
+      metricsLog("Fetched current time", mssql_instance_local_time);
+      metrics.mssql_instance_local_time.set(mssql_instance_local_time);
+    }
   },
 };
 
@@ -57,9 +63,11 @@ GROUP BY DB_NAME(sP.dbid)`,
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const database = row[0].value;
-      const mssql_connections = row[1].value;
-      metricsLog("Fetched number of connections for database", database, mssql_connections);
-      metrics.mssql_connections.set({ database, state: "current" }, mssql_connections);
+      const mssql_connections = Number(row[1].value);
+      if (!isNaN(mssql_connections)) {
+        metricsLog("Fetched number of connections for database", database, mssql_connections);
+        metrics.mssql_connections.set({ database, state: "current" }, mssql_connections);
+      }
     }
   },
 };
@@ -82,9 +90,11 @@ GROUP BY host_name, dbid`,
       const row = rows[i];
       const client = row[0].value;
       const database = row[1].value;
-      const mssql_client_connections = row[2].value;
-      metricsLog("Fetched number of connections for client", client, database, mssql_client_connections);
-      metrics.mssql_client_connections.set({ client, database }, mssql_client_connections);
+      const mssql_client_connections = Number(row[2].value);
+      if (!isNaN(mssql_client_connections)) {
+        metricsLog("Fetched number of connections for client", client, database, mssql_client_connections);
+        metrics.mssql_client_connections.set({ client, database }, mssql_client_connections);
+      }
     }
   },
 };
@@ -100,9 +110,11 @@ const mssql_deadlocks = {
 FROM sys.dm_os_performance_counters
 WHERE counter_name = 'Number of Deadlocks/sec' AND instance_name = '_Total'`,
   collect: (rows, metrics) => {
-    const mssql_deadlocks = rows[0][0].value;
-    metricsLog("Fetched number of deadlocks/sec", mssql_deadlocks);
-    metrics.mssql_deadlocks_per_second.set(mssql_deadlocks);
+    const mssql_deadlocks = Number(rows[0][0].value);
+    if (!isNaN(mssql_deadlocks)) {
+      metricsLog("Fetched number of deadlocks/sec", mssql_deadlocks);
+      metrics.mssql_deadlocks_per_second.set(mssql_deadlocks);
+    }
   },
 };
 
@@ -114,9 +126,11 @@ const mssql_user_errors = {
 FROM sys.dm_os_performance_counters
 WHERE counter_name = 'Errors/sec' AND instance_name = 'User Errors'`,
   collect: (rows, metrics) => {
-    const mssql_user_errors = rows[0][0].value;
-    metricsLog("Fetched number of user errors/sec", mssql_user_errors);
-    metrics.mssql_user_errors.set(mssql_user_errors);
+    const mssql_user_errors = Number(rows[0][0].value);
+    if (!isNaN(mssql_user_errors)) {
+      metricsLog("Fetched number of user errors/sec", mssql_user_errors);
+      metrics.mssql_user_errors.set(mssql_user_errors);
+    }
   },
 };
 
@@ -128,7 +142,7 @@ const mssql_kill_connection_errors = {
 FROM sys.dm_os_performance_counters
 WHERE counter_name = 'Errors/sec' AND instance_name = 'Kill Connection Errors'`,
   collect: (rows, metrics) => {
-    const mssql_kill_connection_errors = rows[0][0].value;
+    const mssql_kill_connection_errors = Number(rows[0][0].value);
     metricsLog("Fetched number of kill connection errors/sec", mssql_kill_connection_errors);
     metrics.mssql_kill_connection_errors.set(mssql_kill_connection_errors);
   },
@@ -147,9 +161,11 @@ const mssql_database_state = {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const database = row[0].value;
-      const mssql_database_state = row[1].value;
-      metricsLog("Fetched state for database", database, mssql_database_state);
-      metrics.mssql_database_state.set({ database }, mssql_database_state);
+      const mssql_database_state = Number(row[1].value);
+      if (!isNaN(mssql_database_state)) {
+        metricsLog("Fetched state for database", database, mssql_database_state);
+        metrics.mssql_database_state.set({ database }, mssql_database_state);
+      }
     }
   },
 };
@@ -169,9 +185,11 @@ WHERE counter_name = 'Log Growths' and instance_name <> '_Total'`,
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const database = row[0].value;
-      const mssql_log_growths = row[1].value;
-      metricsLog("Fetched number log growths for database", database, mssql_log_growths);
-      metrics.mssql_log_growths.set({ database }, mssql_log_growths);
+      const mssql_log_growths = Number(row[1].value);
+      if (!isNaN(mssql_log_growths)) {
+        metricsLog("Fetched number log growths for database", database, mssql_log_growths);
+        metrics.mssql_log_growths.set({ database }, mssql_log_growths);
+      }
     }
   },
 };
@@ -192,20 +210,22 @@ const mssql_database_filesize = {
       const logicalname = row[1].value;
       const type = row[2].value;
       const filename = row[3].value;
-      const mssql_database_filesize = row[4].value;
-      metricsLog(
-        "Fetched size of files for database ",
-        database,
-        "logicalname",
-        logicalname,
-        "type",
-        type,
-        "filename",
-        filename,
-        "size",
-        mssql_database_filesize
-      );
-      metrics.mssql_database_filesize.set({ database, logicalname, type, filename }, mssql_database_filesize);
+      const mssql_database_filesize = Number(row[4].value);
+      if (!isNaN(mssql_database_filesize)) {
+        metricsLog(
+          "Fetched size of files for database ",
+          database,
+          "logicalname",
+          logicalname,
+          "type",
+          type,
+          "filename",
+          filename,
+          "size",
+          mssql_database_filesize
+        );
+        metrics.mssql_database_filesize.set({ database, logicalname, type, filename }, mssql_database_filesize);
+      }
     }
   },
 };
@@ -236,11 +256,11 @@ const mssql_buffer_manager = {
     `,
   collect: (rows, metrics) => {
     const row = rows[0];
-    const page_read = row[0].value;
-    const page_write = row[1].value;
-    const page_life_expectancy = row[2].value;
-    const lazy_write_total = row[3].value;
-    const page_checkpoint_total = row[4].value;
+    const page_read = Number(row[0].value);
+    const page_write = Number(row[1].value);
+    const page_life_expectancy = Number(row[2].value);
+    const lazy_write_total = Number(row[3].value);
+    const page_checkpoint_total = Number(row[4].value);
     metricsLog(
       "Fetched the Buffer Manager",
       "page_read",
@@ -255,11 +275,11 @@ const mssql_buffer_manager = {
       "lazy_write_total",
       lazy_write_total
     );
-    metrics.mssql_page_read_total.set(page_read);
-    metrics.mssql_page_write_total.set(page_write);
-    metrics.mssql_page_life_expectancy.set(page_life_expectancy);
-    metrics.mssql_page_checkpoint_total.set(page_checkpoint_total);
-    metrics.mssql_lazy_write_total.set(lazy_write_total);
+    if (!isNaN(page_read)) metrics.mssql_page_read_total.set(page_read);
+    if (!isNaN(page_write)) metrics.mssql_page_write_total.set(page_write);
+    if (!isNaN(page_life_expectancy)) metrics.mssql_page_life_expectancy.set(page_life_expectancy);
+    if (!isNaN(page_checkpoint_total)) metrics.mssql_page_checkpoint_total.set(page_checkpoint_total);
+    if (!isNaN(lazy_write_total)) metrics.mssql_lazy_write_total.set(lazy_write_total);
   },
 };
 
@@ -283,17 +303,17 @@ GROUP BY a.database_id`,
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const database = row[0].value;
-      const read = row[1].value;
-      const write = row[2].value;
-      const stall = row[3].value;
-      const queued_read = row[4].value;
-      const queued_write = row[5].value;
+      const read = Number(row[1].value);
+      const write = Number(row[2].value);
+      const stall = Number(row[3].value);
+      const queued_read = Number(row[4].value);
+      const queued_write = Number(row[5].value);
       metricsLog("Fetched number of stalls for database", database, "read", read, "write", write, "queued_read", queued_read, "queued_write", queued_write);
-      metrics.mssql_io_stall_total.set({ database }, stall);
-      metrics.mssql_io_stall.set({ database, type: "read" }, read);
-      metrics.mssql_io_stall.set({ database, type: "write" }, write);
-      metrics.mssql_io_stall.set({ database, type: "queued_read" }, queued_read);
-      metrics.mssql_io_stall.set({ database, type: "queued_write" }, queued_write);
+      if (!isNaN(stall)) metrics.mssql_io_stall_total.set({ database }, stall);
+      if (!isNaN(read)) metrics.mssql_io_stall.set({ database, type: "read" }, read);
+      if (!isNaN(write)) metrics.mssql_io_stall.set({ database, type: "write" }, write);
+      if (!isNaN(queued_read)) metrics.mssql_io_stall.set({ database, type: "queued_read" }, queued_read);
+      if (!isNaN(queued_write)) metrics.mssql_io_stall.set({ database, type: "queued_write" }, queued_write);
     }
   },
 };
@@ -311,9 +331,11 @@ WHERE counter_name = 'Batch Requests/sec'`,
   collect: (rows, metrics) => {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const mssql_batch_requests = row[0].value;
-      metricsLog("Fetched number of batch requests per second", mssql_batch_requests);
-      metrics.mssql_batch_requests.set(mssql_batch_requests);
+      const mssql_batch_requests = Number(row[0].value);
+      if (!isNaN(mssql_batch_requests)) {
+        metricsLog("Fetched number of batch requests per second", mssql_batch_requests);
+        metrics.mssql_batch_requests.set(mssql_batch_requests);
+      }
     }
   },
 };
@@ -333,9 +355,11 @@ WHERE counter_name = 'Transactions/sec' AND instance_name <> '_Total'`,
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const database = row[0].value;
-      const transactions = row[1].value;
-      metricsLog("Fetched number of transactions per second", database, transactions);
-      metrics.mssql_transactions.set({ database }, transactions);
+      const transactions = Number(row[1].value);
+      if (!isNaN(transactions)) {
+        metricsLog("Fetched number of transactions per second", database, transactions);
+        metrics.mssql_transactions.set({ database }, transactions);
+      }
     }
   },
 };
@@ -348,11 +372,11 @@ const mssql_os_process_memory = {
   query: `SELECT page_fault_count, memory_utilization_percentage 
 FROM sys.dm_os_process_memory`,
   collect: (rows, metrics) => {
-    const page_fault_count = rows[0][0].value;
-    const memory_utilization_percentage = rows[0][1].value;
+    const page_fault_count = Number(rows[0][0].value);
+    const memory_utilization_percentage = Number(rows[0][1].value);
     metricsLog("Fetched page fault count", page_fault_count);
-    metrics.mssql_page_fault_count.set(page_fault_count);
-    metrics.mssql_memory_utilization_percentage.set(memory_utilization_percentage);
+    if (!isNaN(page_fault_count)) metrics.mssql_page_fault_count.set(page_fault_count);
+    if (!isNaN(memory_utilization_percentage)) metrics.mssql_memory_utilization_percentage.set(memory_utilization_percentage);
   },
 };
 
@@ -366,10 +390,10 @@ const mssql_os_sys_memory = {
   query: `SELECT total_physical_memory_kb, available_physical_memory_kb, total_page_file_kb, available_page_file_kb 
 FROM sys.dm_os_sys_memory`,
   collect: (rows, metrics) => {
-    const mssql_total_physical_memory_kb = rows[0][0].value;
-    const mssql_available_physical_memory_kb = rows[0][1].value;
-    const mssql_total_page_file_kb = rows[0][2].value;
-    const mssql_available_page_file_kb = rows[0][3].value;
+    const mssql_total_physical_memory_kb = Number(rows[0][0].value);
+    const mssql_available_physical_memory_kb = Number(rows[0][1].value);
+    const mssql_total_page_file_kb = Number(rows[0][2].value);
+    const mssql_available_page_file_kb = Number(rows[0][3].value);
     metricsLog(
       "Fetched system memory information",
       "Total physical memory",
@@ -381,10 +405,10 @@ FROM sys.dm_os_sys_memory`,
       "Available page file",
       mssql_available_page_file_kb
     );
-    metrics.mssql_total_physical_memory_kb.set(mssql_total_physical_memory_kb);
-    metrics.mssql_available_physical_memory_kb.set(mssql_available_physical_memory_kb);
-    metrics.mssql_total_page_file_kb.set(mssql_total_page_file_kb);
-    metrics.mssql_available_page_file_kb.set(mssql_available_page_file_kb);
+    if (!isNaN(mssql_total_physical_memory_kb)) metrics.mssql_total_physical_memory_kb.set(mssql_total_physical_memory_kb);
+    if (!isNaN(mssql_available_physical_memory_kb)) metrics.mssql_available_physical_memory_kb.set(mssql_available_physical_memory_kb);
+    if (!isNaN(mssql_total_page_file_kb)) metrics.mssql_total_page_file_kb.set(mssql_total_page_file_kb);
+    if (!isNaN(mssql_available_page_file_kb)) metrics.mssql_available_page_file_kb.set(mssql_available_page_file_kb);
   },
 };
 
@@ -404,11 +428,13 @@ const mssql_buffer_cache_hit_ratio = {
   WHERE a.counter_name = 'Buffer cache hit ratio'
     AND b.counter_name = 'Buffer cache hit ratio base'`,
   collect: (rows, metrics) => {
-    const hit_ratio = rows[0][0].value;
-    const hit_ratio_base = rows[0][1].value;
-    const ratio = (hit_ratio / hit_ratio_base) * 100;
-    metricsLog("Fetched buffer cache hit ratio", ratio);
-    metrics.mssql_cache_hit_ratio.set(ratio);
+    const hit_ratio = Number(rows[0][0].value);
+    const hit_ratio_base = Number(rows[0][1].value);
+    if (!isNaN(hit_ratio) && !isNaN(hit_ratio_base) && hit_ratio_base !== 0) {
+      const ratio = (hit_ratio / hit_ratio_base) * 100;
+      metricsLog("Fetched buffer cache hit ratio", ratio);
+      metrics.mssql_cache_hit_ratio.set(ratio);
+    }
   },
 };
 
@@ -424,9 +450,11 @@ const mssql_full_scans = {
   WHERE counter_name = 'Full Scans/sec'
     AND object_name = 'SQLServer:Access Methods'`,
   collect: (rows, metrics) => {
-    const scans = rows[0][0].value;
-    metricsLog("Fetched full scans per second", scans);
-    metrics.mssql_full_scans.set(scans);
+    const scans = Number(rows[0][0].value);
+    if (!isNaN(scans)) {
+      metricsLog("Fetched full scans per second", scans);
+      metrics.mssql_full_scans.set(scans);
+    }
   },
 };
 
@@ -449,11 +477,13 @@ const mssql_plan_cache_hit_ratio = {
     AND a.object_name = 'SQLServer:Plan Cache'
     AND a.instance_name = '_Total'`,
   collect: (rows, metrics) => {
-    const hit_ratio = rows[0][0].value;
-    const hit_ratio_base = rows[0][1].value;
-    const ratio = (hit_ratio / hit_ratio_base) * 100;
-    metricsLog("Fetched plan cache hit ratio", ratio);
-    metrics.mssql_plan_cache_hit_ratio.set(ratio);
+    const hit_ratio = Number(rows[0][0].value);
+    const hit_ratio_base = Number(rows[0][1].value);
+    if (!isNaN(hit_ratio) && !isNaN(hit_ratio_base) && hit_ratio_base !== 0) {
+      const ratio = (hit_ratio / hit_ratio_base) * 100;
+      metricsLog("Fetched plan cache hit ratio", ratio);
+      metrics.mssql_plan_cache_hit_ratio.set(ratio);
+    }
   },
 };
 
@@ -479,9 +509,11 @@ const mssql_ag_sync_lag = {
       const database = row[0].value;
       const replica = row[1].value;
       const sync_state = row[2].value;
-      const sync_lag = row[3].value;
-      metricsLog("Fetched AG sync lag for database", database, "replica", replica, "state", sync_state, "lag (sec)", sync_lag);
-      metrics.mssql_ag_sync_lag_secs.set({ database, replica, sync_state }, sync_lag);
+      const sync_lag = Number(row[3].value);
+      if (!isNaN(sync_lag)) {
+        metricsLog("Fetched AG sync lag for database", database, "replica", replica, "state", sync_state, "lag (sec)", sync_lag);
+        metrics.mssql_ag_sync_lag_secs.set({ database, replica, sync_state }, sync_lag);
+      }
     }
   },
 };
@@ -538,13 +570,13 @@ const mssql_sql_compilations = {
     )`,
   collect: (rows, metrics) => {
     const row = rows[0];
-    metrics.mssql_sql_compilations.set(row[0].value);
-    metrics.mssql_sql_recompilations.set(row[1].value);
-    metrics.mssql_forced_parameterizations.set(row[2].value);
-    metrics.mssql_auto_param_attempts.set(row[3].value);
-    metrics.mssql_failed_auto_params.set(row[4].value);
-    metrics.mssql_safe_auto_params.set(row[5].value);
-    metrics.mssql_unsafe_auto_params.set(row[6].value);
+    metrics.mssql_sql_compilations.set(Number(row[0].value));
+    metrics.mssql_sql_recompilations.set(Number(row[1].value));
+    metrics.mssql_forced_parameterizations.set(Number(row[2].value));
+    metrics.mssql_auto_param_attempts.set(Number(row[3].value));
+    metrics.mssql_failed_auto_params.set(Number(row[4].value));
+    metrics.mssql_safe_auto_params.set(Number(row[5].value));
+    metrics.mssql_unsafe_auto_params.set(Number(row[6].value));
     metricsLog("Fetched SQL compilation metrics", row);
   }
 };

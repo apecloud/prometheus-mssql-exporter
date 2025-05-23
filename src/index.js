@@ -87,6 +87,12 @@ async function connect() {
  */
 async function measure(connection, collector, name) {
   return new Promise((resolve) => {
+    if (collector.metrics) {
+      for (const gauge of Object.values(collector.metrics)) {
+          gauge.reset();
+      }
+    }
+    
     queriesLog(`Executing metric ${name} query: ${collector.query}`);
     let request = new Request(collector.query, (error, rowCount, rows) => {
       if (!error) {
