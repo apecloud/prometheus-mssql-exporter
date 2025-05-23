@@ -119,6 +119,18 @@ async function measure(connection, collector, name) {
  * @returns Promise of execution (no value returned)
  */
 async function collect(connection) {
+  // Reset all metrics before collection
+  for (const metric of Object.values(entries)) {
+    if (metric.metrics) {
+      for (const gauge of Object.values(metric.metrics)) {
+        if (gauge.reset) {
+          gauge.reset();
+        }
+      }
+    }
+  }
+
+  // Collect fresh metrics
   for (const [metricName, metric] of Object.entries(entries)) {
     await measure(connection, metric, metricName);
   }

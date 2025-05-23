@@ -286,18 +286,6 @@ GROUP BY a.database_id`,
       currentDatabases.add(row[0].value);
     }
 
-    // Reset metrics for any databases not in current results
-    const currentLabels = metrics.mssql_io_stall_total.get().values;
-    for (const { labels } of currentLabels) {
-      if (!currentDatabases.has(labels.database)) {
-        metrics.mssql_io_stall_total.remove(labels.database);
-        metrics.mssql_io_stall.remove({ database: labels.database, type: "read" });
-        metrics.mssql_io_stall.remove({ database: labels.database, type: "write" });
-        metrics.mssql_io_stall.remove({ database: labels.database, type: "queued_read" });
-        metrics.mssql_io_stall.remove({ database: labels.database, type: "queued_write" });
-      }
-    }
-
     // Set metrics for current databases
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
