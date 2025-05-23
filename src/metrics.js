@@ -280,13 +280,6 @@ sys.dm_io_virtual_file_stats(null, null) a
 INNER JOIN sys.master_files b ON a.database_id = b.database_id and a.file_id = b.file_id
 GROUP BY a.database_id`,
   collect: (rows, metrics) => {
-    // Get list of current databases from query results
-    const currentDatabases = new Set();
-    for (const row of rows) {
-      currentDatabases.add(row[0].value);
-    }
-
-    // Set metrics for current databases
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const database = row[0].value;
