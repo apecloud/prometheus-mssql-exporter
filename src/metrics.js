@@ -492,7 +492,12 @@ const mssql_ag_sync_lag = {
     mssql_ag_sync_lag_secs: new client.Gauge({
       name: "mssql_ag_sync_lag_secs",
       help: "Synchronization lag in seconds between primary and secondary replicas in Availability Group",
-      labelNames: ["database", "replica", "sync_state"]
+      labelNames: ["database", "replica"]
+    }),
+    mssql_ag_sync_state: new client.Gauge({
+      name: "mssql_ag_sync_state",
+      help: "Synchronization state of Availability Group replicas: 0=NOT SYNCHRONIZING 1=SYNCHRONIZING 2=SYNCHRONIZED 3=REVERTING 4=INITIALIZING",
+      labelNames: ["database", "replica"]
     }),
   },
   query: `SELECT 
@@ -510,9 +515,22 @@ const mssql_ag_sync_lag = {
       const replica = row[1].value;
       const sync_state = row[2].value;
       const sync_lag = Number(row[3].value);
+      
+      // Map sync state to numeric value
+      let stateValue;
+      switch(sync_state) {
+        case 'NOT SYNCHRONIZING': stateValue = 0; break;
+        case 'SYNCHRONIZING': stateValue = 1; break;
+        case 'SYNCHRONIZED': stateValue = 2; break;
+        case 'REVERTING': stateValue = 3; break;
+        case 'INITIALIZING': stateValue = 4; break;
+        default: stateValue = -1; // Unknown state
+      }
+
       if (!isNaN(sync_lag)) {
         metricsLog("Fetched AG sync lag for database", database, "replica", replica, "state", sync_state, "lag (sec)", sync_lag);
-        metrics.mssql_ag_sync_lag_secs.set({ database, replica, sync_state }, sync_lag);
+        metrics.mssql_ag_sync_lag_secs.set({ database, replica }, sync_lag);
+        metrics.mssql_ag_sync_state.set({ database, replica }, stateValue);
       }
     }
   },
